@@ -1,0 +1,30 @@
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0E0E10;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(91, 46, 255, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(1, 217, 255, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(91, 46, 255, 0.1) 0px, transparent 50%);
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* Mobile-first design */
+@media (max-width: 768px) {
+  .App {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 769px) {
+  .App {
+    max-width: 768px;
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  }
+}
+

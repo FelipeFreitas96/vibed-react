@@ -1,0 +1,124 @@
+.registro-page {
+  min-height: 100vh;
+  background: #0E0E10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  padding-top: calc(60px + 2rem);
+}
+
+.registro-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+}
+
+.registro-card {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 20px !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.registro-card .ant-card-body {
+  padding: 2rem !important;
+}
+
+.registro-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.auth-input {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  color: #FFFFFF !important;
+  height: 48px !important;
+}
+
+.auth-input:hover {
+  border-color: rgba(91, 46, 255, 0.5) !important;
+}
+
+.auth-input:focus,
+.auth-input.ant-input-focused {
+  border-color: #5B2EFF !important;
+  box-shadow: 0 0 0 2px rgba(91, 46, 255, 0.2) !important;
+}
+
+.auth-input::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.auth-input .anticon {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.auth-button {
+  height: 48px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #5B2EFF 0%, #01D9FF 100%) !important;
+  border: none !important;
+  font-weight: 600 !important;
+  font-size: 16px !important;
+  margin-top: 0.5rem;
+  transition: all 0.3s ease !important;
+}
+
+.auth-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(91, 46, 255, 0.4) !important;
+}
+
+.registro-footer {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.link-button {
+  color: #01D9FF !important;
+  padding: 0 !important;
+  font-weight: 600 !important;
+}
+
+.link-button:hover {
+  color: #5B2EFF !important;
+}
+
+/* Ant Design overrides */
+.registro-card .ant-form-item-label > label {
+  color: #FFFFFF !important;
+  font-weight: 500 !important;
+}
+
+.registro-card .ant-input-affix-wrapper {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.registro-card .ant-input-affix-wrapper:hover {
+  border-color: rgba(91, 46, 255, 0.5) !important;
+}
+
+.registro-card .ant-input-affix-wrapper-focused {
+  border-color: #5B2EFF !important;
+  box-shadow: 0 0 0 2px rgba(91, 46, 255, 0.2) !important;
+}
+
+.registro-card .ant-input {
+  background: transparent !important;
+  color: #FFFFFF !important;
+}
+
+.registro-card .ant-input::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+

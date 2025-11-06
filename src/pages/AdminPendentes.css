@@ -1,0 +1,91 @@
+.admin-pendentes {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0E0E10 0%, #1a1a1f 100%);
+  padding-top: 60px;
+}
+
+.admin-pendentes-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.admin-pendentes-title {
+  color: #FFFFFF !important;
+  margin-bottom: 2rem !important;
+}
+
+.btn-voltar {
+  margin-bottom: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+}
+
+.btn-voltar:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #FFFFFF;
+}
+
+.eventos-pendentes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.evento-pendente-card {
+  width: 100%;
+}
+
+.evento-pendente-card .ant-card-body {
+  padding: 16px !important;
+}
+
+.evento-pendente-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 12px;
+}
+
+.evento-pendente-card .ant-space {
+  width: 100% !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+.evento-pendente-card .ant-space-item {
+  flex: 1 1 calc(33.333% - 6px) !important;
+  min-width: 0 !important;
+}
+
+.evento-pendente-card .ant-space .ant-btn {
+  width: 100% !important;
+  min-width: 0 !important;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  height: auto !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+@media (max-width: 640px) {
+  .evento-pendente-card .ant-space-item {
+    flex: 1 1 calc(50% - 4px) !important;
+  }
+  
+  .evento-pendente-card .ant-space-item:last-child {
+    flex: 1 1 100% !important;
+  }
+  
+  .evento-pendente-card .ant-space .ant-btn {
+    font-size: 11px !important;
+    padding: 6px 12px !important;
+  }
+}
+

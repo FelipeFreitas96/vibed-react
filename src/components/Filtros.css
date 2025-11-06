@@ -1,0 +1,82 @@
+.toolbar-btn {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+}
+
+.toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.filtros-drawer .ant-drawer-title {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.filtros-drawer .ant-drawer-close {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.filtros-drawer .ant-drawer-close:hover {
+  color: #FFFFFF;
+}
+
+.filtro-input {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #FFFFFF !important;
+}
+
+.filtro-input:hover {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.filtro-input:focus {
+  border-color: #00B7FF !important;
+  box-shadow: 0 0 0 2px rgba(0, 183, 255, 0.2) !important;
+}
+
+.filtro-input::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.sub-filtros-section {
+  margin-top: 24px;
+}
+
+.sub-filtros-section:first-child {
+  margin-top: 0;
+}
+
+.sub-filtros-section .filtro-input {
+  margin-bottom: 0;
+}
+
+.sub-filtros-section .ant-select:not(:first-child) {
+  margin-top: 16px;
+}
+
+.sub-filtros-section .ant-checkbox-group:not(:first-child) {
+  margin-top: 16px;
+}
+
+.sub-filtros-section .ant-select {
+  margin-bottom: 0;
+}
+
+.sub-filtros-section .ant-checkbox-group {
+  margin-bottom: 0;
+}
+
+.sub-filtros-section .ant-space {
+  margin-bottom: 0;
+}

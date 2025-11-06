@@ -1,0 +1,195 @@
+.header {
+  background: rgba(14, 14, 16, 0.8);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 0.75rem 1rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1000;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.header-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(91, 46, 255, 0.1) 0%, rgba(1, 217, 255, 0.1) 100%);
+  pointer-events: none;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  gap: 0.75rem;
+}
+
+.header-logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, rgba(91, 46, 255, 0.2) 0%, rgba(1, 217, 255, 0.2) 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(91, 46, 255, 0.3);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-logo-icon:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(91, 46, 255, 0.4);
+}
+
+.header-logo-icon-svg {
+  font-size: 18px;
+  color: #00B7FF;
+}
+
+.header-actions {
+  flex-shrink: 0;
+}
+
+.btn-novo-lugar {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #FFFFFF !important;
+  font-weight: 500;
+  height: 34px;
+  padding: 0 14px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: none;
+  backdrop-filter: blur(10px);
+  line-height: 1;
+}
+
+.btn-novo-lugar-icon {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.btn-novo-lugar-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.btn-novo-lugar:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-novo-lugar:active {
+  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.header-avatar {
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+}
+
+.header-avatar .anticon {
+  color: #FFFFFF !important;
+  font-size: 16px;
+}
+
+.header-avatar:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.header-avatar:active {
+  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+@media (min-width: 769px) {
+  .header {
+    padding: 0.875rem 1.5rem;
+  }
+
+  .header-logo-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .header-logo-icon-svg {
+    font-size: 20px;
+  }
+
+  .btn-novo-lugar {
+    height: 36px;
+    padding: 0 16px;
+  }
+
+  .btn-novo-lugar-icon {
+    font-size: 14px;
+  }
+
+  .btn-novo-lugar-text {
+    font-size: 13px;
+  }
+
+  .header-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 50% !important;
+  }
+
+  .header-avatar .anticon {
+    font-size: 17px;
+  }
+}
+
+.btn-notificacoes {
+  transition: all 0.3s ease;
+}
+
+.btn-notificacoes:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #00B7FF !important;
+  transform: scale(1.1);
+}
+
+.btn-notificacoes:active {
+  transform: scale(0.95);
+}
