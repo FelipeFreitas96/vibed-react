@@ -63,7 +63,7 @@ const ListaEventos: React.FC<ListaEventosProps> = ({ eventos }) => {
         .sort((a: number, b: number) => a - b)
         .map((dia: number) => diasNomes[dia])
         .join(', ');
-      return `Toda semana: ${diasSelecionados}`;
+      return `${diasSelecionados}`;
     }
     if (evento.data) {
       const data = new Date(evento.data);
@@ -116,10 +116,38 @@ const ListaEventos: React.FC<ListaEventosProps> = ({ eventos }) => {
     return tipos[tipo] || { label: tipo, color: '#95A5A6', gradient: 'linear-gradient(135deg, #95A5A6, #BDC3C7)' };
   };
 
-  const formatarPreco = (preco: string, valorEntrada?: number) => {
-    if (preco === 'sem-entrada') {
-      return 'Sem entrada';
+  const formatarPreco = (evento: any) => {
+    // Se for evento recorrente com horários por dia
+    if (evento.recorrente && evento.horariosPorDia && evento.horariosPorDia.length > 0) {
+      const horariosPorDia = evento.horariosPorDia;
+      
+      // Verificar se todos os dias são grátis
+      const todosGratuitos = horariosPorDia.every((h: any) => h.preco === 'gratuito');
+      if (todosGratuitos) {
+        return 'Entrada grátis';
+      }
+      
+      // Verificar se todos os dias pagos têm o mesmo valor
+      const diasPagos = horariosPorDia.filter((h: any) => h.preco === 'pago' && h.valorEntrada);
+      if (diasPagos.length > 0) {
+        const primeiroValor = diasPagos[0].valorEntrada;
+        const todosMesmoValor = diasPagos.every((h: any) => h.valorEntrada === primeiroValor);
+        
+        // Se todos os dias pagos têm o mesmo valor e não há dias grátis
+        if (todosMesmoValor && diasPagos.length === horariosPorDia.length) {
+          const valorFormatado = primeiroValor.toFixed(2).replace('.', ',');
+          return `Entrada R$ ${valorFormatado}`;
+        }
+      }
+      
+      // Caso contrário, mostrar "Verificar Valores"
+      return 'Verificar Valores';
     }
+    
+    // Para eventos não recorrentes, usar lógica padrão
+    const preco = evento.preco;
+    const valorEntrada = evento.valorEntrada;
+    
     if (preco === 'gratuito') {
       return 'Entrada grátis';
     }
@@ -127,7 +155,7 @@ const ListaEventos: React.FC<ListaEventosProps> = ({ eventos }) => {
       const valorFormatado = valorEntrada.toFixed(2).replace('.', ',');
       return `Entrada R$ ${valorFormatado}`;
     }
-    return 'Entrada';
+    return 'Entrada grátis'; // Default para gratuito
   };
 
   return (
@@ -189,14 +217,14 @@ const ListaEventos: React.FC<ListaEventosProps> = ({ eventos }) => {
             }}
           >
             <div className="evento-conteudo">
-              <Space direction="vertical" size={3} style={{ width: '100%', margin: 0 }}>
+              <Space direction="vertical" size={8} style={{ width: '100%', margin: 0 }}>
                 <div className="evento-header">
                   <Title level={5} className="evento-nome">
                     {evento.nome}
                   </Title>
                 </div>
 
-                <Space direction="vertical" size={3} style={{ width: '100%', margin: 0 }}>
+                <Space direction="vertical" size={8} style={{ width: '100%', margin: 0 }}>
                   <Tag
                     icon={<TagOutlined />}
                     className="evento-tipo-tag"
@@ -214,7 +242,7 @@ const ListaEventos: React.FC<ListaEventosProps> = ({ eventos }) => {
                     {tipoInfo.label}
                   </Tag>
 
-                  <Space size={3} wrap style={{ width: '100%', margin: 0 }}>
+                  <Space size={8} wrap style={{ width: '100%', margin: 0 }}>
                     <Text className="evento-info-text" style={{ margin: 0 }}>
                       <CalendarOutlined /> {formatarData(evento)}
                     </Text>
@@ -223,11 +251,9 @@ const ListaEventos: React.FC<ListaEventosProps> = ({ eventos }) => {
                     </Text>
                   </Space>
 
-                  {evento.preco !== 'sem-entrada' && (
-                    <Text className="evento-info-text" style={{ margin: 0 }}>
-                      <DollarOutlined /> {formatarPreco(evento.preco, evento.valorEntrada)}
-                    </Text>
-                  )}
+                  <Text className="evento-info-text" style={{ margin: 0 }}>
+                    <DollarOutlined /> {formatarPreco(evento)}
+                  </Text>
                 </Space>
               </Space>
             </div>

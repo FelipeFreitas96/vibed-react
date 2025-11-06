@@ -17,6 +17,20 @@ Aplicativo mobile-first desenvolvido com Capacitor + React para gerenciar festas
 
 ## 🚀 Como Executar
 
+### Configuração
+
+Antes de executar, configure a URL da API criando um arquivo `.env` na raiz do projeto `mobile/`:
+
+```bash
+# Criar arquivo .env
+VITE_API_URL=https://api.piracuiba.com
+```
+
+Para desenvolvimento local, use:
+```bash
+VITE_API_URL=http://localhost:3001
+```
+
 ### Instalação
 
 ```bash

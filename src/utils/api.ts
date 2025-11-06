@@ -1,5 +1,12 @@
 /**
  * Utilitário para fazer chamadas à API do backend
+ * 
+ * A URL da API é configurada através da variável de ambiente VITE_API_URL.
+ * Crie um arquivo .env na raiz do projeto mobile/ com:
+ * VITE_API_URL=https://api.piracuiba.com
+ * 
+ * Para desenvolvimento local:
+ * VITE_API_URL=http://localhost:3001
  */
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';

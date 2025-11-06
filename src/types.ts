@@ -6,14 +6,22 @@ export type GeneroMusical = 'rock' | 'pop' | 'sertanejo' | 'funk' | 'eletronica'
 export type TipoComida = 'brasileira' | 'italiana' | 'japonesa' | 'mexicana' | 'francesa' | 'chinesa' | 'indiana' | 'vegana' | 'vegetariana' | 'fast-food' | 'churrasco' | 'pizzaria';
 export type Publico = 'LGBT' | 'Hetero';
 
-export type Preco = 'sem-entrada' | 'gratuito' | 'pago';
-export type PrecoFiltro = 'sem-entrada' | 'ate-50' | 'ate-100' | 'ate-200' | 'qualquer-valor';
+export type Preco = 'gratuito' | 'pago';
+export type PrecoFiltro = 'gratuito' | 'ate-50' | 'ate-100' | 'ate-200' | 'qualquer-valor';
 
 export type DiaSemana = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
 
 export interface Localizacao {
   latitude: number;
   longitude: number;
+}
+
+export interface HorarioPorDia {
+  dia: DiaSemana;
+  horarioAbertura: string; // formato HH:mm (ex: "20:00")
+  horarioFechamento: string; // formato HH:mm (ex: "02:00")
+  preco: Preco; // tipo de entrada para este dia ('gratuito', 'pago')
+  valorEntrada?: number; // valor de entrada para este dia (obrigatório se preco === 'pago')
 }
 
 export interface Evento {
@@ -23,8 +31,8 @@ export interface Evento {
   tipo: TipoEvento;
   data?: string; // ISO string (opcional para eventos recorrentes)
   turno: Turno; // calculado automaticamente baseado em horarioAbertura e horarioFechamento
-  horarioAbertura: string; // formato HH:mm (ex: "20:00")
-  horarioFechamento: string; // formato HH:mm (ex: "02:00")
+  horarioAbertura: string; // formato HH:mm (ex: "20:00") - usado para eventos não recorrentes ou como padrão
+  horarioFechamento: string; // formato HH:mm (ex: "02:00") - usado para eventos não recorrentes ou como padrão
   preco: Preco;
   valorEntrada?: number; // valor exato da entrada em reais (obrigatório quando preco === 'pago')
   endereco: string;
@@ -40,7 +48,8 @@ export interface Evento {
   aprovadoEm?: string; // data de aprovação
   distancia?: number; // em metros, calculado
   recorrente: boolean; // se é evento recorrente
-  diasSemana?: DiaSemana[]; // dias da semana que o evento acontece (apenas se recorrente)
+  diasSemana?: DiaSemana[]; // dias da semana que o evento acontece (apenas se recorrente) - DEPRECATED: usar horariosPorDia
+  horariosPorDia?: HorarioPorDia[]; // horários individualizados por dia da semana (apenas se recorrente)
   // Campos específicos por tipo
   generoMusical?: GeneroMusical[]; // para baladas, shows, festivais, bares (pode ter múltiplos)
   tipoComida?: TipoComida; // para restaurantes

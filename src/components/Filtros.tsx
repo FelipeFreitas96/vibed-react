@@ -19,7 +19,7 @@ const Filtros: React.FC = () => {
 
   const tipos: TipoEvento[] = ['restaurante', 'balada', 'show', 'festival', 'bar'];
   const turnos: Turno[] = ['manha', 'tarde', 'noite', 'madrugada'];
-  const precos: PrecoFiltro[] = ['sem-entrada', 'ate-50', 'ate-100', 'ate-200', 'qualquer-valor'];
+  const precos: PrecoFiltro[] = ['gratuito', 'ate-50', 'ate-100', 'ate-200', 'qualquer-valor'];
 
   const aplicarFiltro = (campo: keyof typeof filtros, valor: string | boolean | string[] | undefined | null) => {
     // Tratar o valor corretamente
@@ -86,7 +86,7 @@ const Filtros: React.FC = () => {
 
   const precoOptions = precos.map(preco => ({
     value: preco,
-    label: preco === 'sem-entrada' ? '🚫 Sem entrada' :
+    label: preco === 'gratuito' ? '🆓 Entrada grátis' :
            preco === 'ate-50' ? '💵 Até R$ 50' :
            preco === 'ate-100' ? '💵💵 Até R$ 100' :
            preco === 'ate-200' ? '💵💵💵 Até R$ 200' : '💵💵💵💵 Qualquer valor'

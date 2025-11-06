@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Card, Space, Typography, Tag, Rate, Descriptions, Empty, message, Dropdown, MenuProps, Modal, Upload, Image } from 'antd';
+import { Button, Card, Space, Typography, Tag, Rate, Empty, message, Dropdown, MenuProps, Modal, Upload, Image } from 'antd';
 import { 
   ArrowLeftOutlined,
   CalendarOutlined,
@@ -189,9 +189,18 @@ const DetalhesEvento: React.FC = () => {
       const diasNomes = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
       const diasSelecionados = evento.diasSemana
         .sort((a: number, b: number) => a - b)
-        .map((dia: number) => diasNomes[dia])
+        .map((dia: number) => {
+          // Se houver horários por dia, incluir horário no formato
+          if (evento.horariosPorDia && evento.horariosPorDia.length > 0) {
+            const horarioDia = evento.horariosPorDia.find((h: any) => h.dia === dia);
+            if (horarioDia) {
+              return `${diasNomes[dia]} (${horarioDia.horarioAbertura} - ${horarioDia.horarioFechamento})`;
+            }
+          }
+          return diasNomes[dia];
+        })
         .join(', ');
-      return `Toda semana: ${diasSelecionados}`;
+      return `${diasSelecionados}`;
     }
     if (evento.data) {
       const data = new Date(evento.data);
@@ -217,9 +226,6 @@ const DetalhesEvento: React.FC = () => {
   };
 
   const formatarPreco = (preco: string, valorEntrada?: number) => {
-    if (preco === 'sem-entrada') {
-      return 'Sem entrada';
-    }
     if (preco === 'gratuito') {
       return 'Entrada grátis';
     }
@@ -227,7 +233,7 @@ const DetalhesEvento: React.FC = () => {
       const valorFormatado = valorEntrada.toFixed(2).replace('.', ',');
       return `R$ ${valorFormatado}`;
     }
-    return 'Entrada';
+    return 'Entrada grátis'; // Default para gratuito
   };
 
   const formatarGeneroMusical = (genero: string) => {
@@ -437,32 +443,98 @@ const DetalhesEvento: React.FC = () => {
               </Card>
             )}
 
-            <Descriptions 
-              column={1} 
-              bordered 
-              size="middle"
-              className="evento-descriptions"
-              items={[
-                {
-                  key: 'data',
-                  label: <><CalendarOutlined /> Data</>,
-                  children: formatarData(evento),
-                },
-                {
-                  key: 'horarios',
-                  label: <><ClockCircleOutlined /> Horários</>,
-                  children: `${evento.horarioAbertura} - ${evento.horarioFechamento}`,
-                },
-                {
-                  key: 'preco',
-                  label: <><DollarOutlined /> Valor de Entrada</>,
-                  children: formatarPreco(evento.preco, evento.valorEntrada),
-                },
-                // Informações específicas por tipo
-                ...(evento.generoMusical && evento.generoMusical.length > 0 ? [{
-                  key: 'generoMusical',
-                  label: <>🎵 Gêneros Musicais</>,
-                  children: (
+            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              {/* Data */}
+              <Card 
+                size="small" 
+                style={{ 
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                }}
+              >
+                <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                  <Text strong style={{ color: '#FFFFFF', fontSize: 14 }}>
+                    <CalendarOutlined /> Data
+                  </Text>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 16 }}>
+                    {formatarData(evento)}
+                  </Text>
+                </Space>
+              </Card>
+
+              {/* Horários */}
+              <Card 
+                size="small" 
+                style={{ 
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                }}
+              >
+                <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                  <Text strong style={{ color: '#FFFFFF', fontSize: 14 }}>
+                    <ClockCircleOutlined /> Horários
+                  </Text>
+                  {evento.recorrente && evento.horariosPorDia && evento.horariosPorDia.length > 0 ? (
+                    <Space direction="vertical" style={{ width: '100%' }} size="small">
+                      {evento.horariosPorDia
+                        .sort((a: any, b: any) => a.dia - b.dia)
+                        .map((horario: any) => {
+                          const diasNomes = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+                          return (
+                            <div key={horario.dia} style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 16 }}>
+                              <strong>{diasNomes[horario.dia]}:</strong> {horario.horarioAbertura} - {horario.horarioFechamento}
+                              <span style={{ marginLeft: '8px' }}>
+                                {horario.preco === 'pago' && horario.valorEntrada && horario.valorEntrada > 0 ? (
+                                  <span style={{ color: '#FFD700' }}>• R$ {horario.valorEntrada.toFixed(2)}</span>
+                                ) : (
+                                  <span style={{ color: '#2ECC71' }}>• Gratuito</span>
+                                )}
+                              </span>
+                            </div>
+                          );
+                        })}
+                    </Space>
+                  ) : (
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 16 }}>
+                      {evento.horarioAbertura} - {evento.horarioFechamento}
+                    </Text>
+                  )}
+                </Space>
+              </Card>
+
+              {/* Valor de Entrada (apenas para eventos não recorrentes) */}
+              {!(evento.recorrente && evento.horariosPorDia && evento.horariosPorDia.length > 0) && (
+                <Card 
+                  size="small" 
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                    <Text strong style={{ color: '#FFFFFF', fontSize: 14 }}>
+                      <DollarOutlined /> Valor de Entrada
+                    </Text>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 16 }}>
+                      {formatarPreco(evento.preco, evento.valorEntrada)}
+                    </Text>
+                  </Space>
+                </Card>
+              )}
+
+              {/* Gêneros Musicais */}
+              {evento.generoMusical && evento.generoMusical.length > 0 && (
+                <Card 
+                  size="small" 
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                    <Text strong style={{ color: '#FFFFFF', fontSize: 14 }}>
+                      🎵 Gêneros Musicais
+                    </Text>
                     <Space wrap>
                       {evento.generoMusical.map((genero: string) => (
                         <Tag 
@@ -477,12 +549,23 @@ const DetalhesEvento: React.FC = () => {
                         </Tag>
                       ))}
                     </Space>
-                  ),
-                }] : []),
-                ...(evento.tipoComida ? [{
-                  key: 'tipoComida',
-                  label: <>🍽️ Tipo de Comida</>,
-                  children: (
+                  </Space>
+                </Card>
+              )}
+
+              {/* Tipo de Comida */}
+              {evento.tipoComida && (
+                <Card 
+                  size="small" 
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                    <Text strong style={{ color: '#FFFFFF', fontSize: 14 }}>
+                      🍽️ Tipo de Comida
+                    </Text>
                     <Tag 
                       style={{ 
                         background: 'rgba(255, 107, 107, 0.2)',
@@ -492,12 +575,23 @@ const DetalhesEvento: React.FC = () => {
                     >
                       {formatarTipoComida(evento.tipoComida)}
                     </Tag>
-                  ),
-                }] : []),
-                ...(evento.publico ? [{
-                  key: 'publico',
-                  label: <>👥 Público</>,
-                  children: (
+                  </Space>
+                </Card>
+              )}
+
+              {/* Público */}
+              {evento.publico && (
+                <Card 
+                  size="small" 
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                    <Text strong style={{ color: '#FFFFFF', fontSize: 14 }}>
+                      👥 Público
+                    </Text>
                     <Tag 
                       style={{ 
                         background: evento.publico === 'LGBT' ? 'rgba(255, 107, 107, 0.2)' : 'rgba(155, 89, 182, 0.2)',
@@ -507,12 +601,23 @@ const DetalhesEvento: React.FC = () => {
                     >
                       {evento.publico === 'LGBT' ? '🏳️‍🌈 LGBT' : '👥 Hetero'}
                     </Tag>
-                  ),
-                }] : []),
-                ...(evento.temBrinquedoteca !== undefined ? [{
-                  key: 'temBrinquedoteca',
-                  label: <>🧒 Brinquedoteca</>,
-                  children: (
+                  </Space>
+                </Card>
+              )}
+
+              {/* Brinquedoteca */}
+              {evento.tipo === 'bar' && evento.temBrinquedoteca !== undefined && (
+                <Card 
+                  size="small" 
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                    <Text strong style={{ color: '#FFFFFF', fontSize: 14 }}>
+                      🧒 Brinquedoteca
+                    </Text>
                     <Tag 
                       style={{ 
                         background: evento.temBrinquedoteca ? 'rgba(46, 204, 113, 0.2)' : 'rgba(149, 165, 166, 0.2)',
@@ -522,15 +627,58 @@ const DetalhesEvento: React.FC = () => {
                     >
                       {evento.temBrinquedoteca ? '✅ Sim' : '❌ Não'}
                     </Tag>
-                  ),
-                }] : []),
-                {
-                  key: 'endereco',
-                  label: <><EnvironmentOutlined /> Endereço</>,
-                  children: evento.endereco,
-                },
-              ]}
-            />
+                  </Space>
+                </Card>
+              )}
+
+              {/* Endereço */}
+              <Card 
+                size="small" 
+                style={{ 
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                }}
+              >
+                <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                  <Text strong style={{ color: '#FFFFFF', fontSize: 14 }}>
+                    <EnvironmentOutlined /> Endereço
+                  </Text>
+                  <Button
+                    type="link"
+                    onClick={() => {
+                      // Abrir Google Maps com o endereço ou coordenadas
+                      let url: string;
+                      
+                      if (evento.localizacao && evento.localizacao.latitude && evento.localizacao.longitude) {
+                        // Se tiver coordenadas, usar coordenadas (abre direto no app do Maps no mobile)
+                        url = `https://www.google.com/maps?q=${evento.localizacao.latitude},${evento.localizacao.longitude}`;
+                      } else {
+                        // Se não tiver coordenadas, usar o endereço
+                        const enderecoCodificado = encodeURIComponent(evento.endereco);
+                        url = `https://www.google.com/maps/search/?api=1&query=${enderecoCodificado}`;
+                      }
+                      
+                      window.open(url, '_blank');
+                    }}
+                    style={{ 
+                      padding: 0,
+                      height: 'auto',
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      fontSize: 16,
+                      textAlign: 'left',
+                      textDecoration: 'underline',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      width: '100%',
+                      display: 'block',
+                    }}
+                  >
+                    {evento.endereco}
+                  </Button>
+                </Space>
+              </Card>
+            </Space>
           </Space>
         </Card>
 

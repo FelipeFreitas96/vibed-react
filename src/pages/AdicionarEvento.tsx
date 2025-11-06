@@ -30,6 +30,9 @@ const AdicionarEvento: React.FC = () => {
   
   // Observar mudanças no campo tipo
   const tipoSelecionado = Form.useWatch('tipo', form);
+  
+  // Observar mudanças nos dias da semana para mostrar horários individualizados
+  const diasSemanaSelecionados = Form.useWatch('diasSemana', form) || [];
 
   // Verificar se é sugestão e carregar dados do evento
   useEffect(() => {
@@ -43,6 +46,18 @@ const AdicionarEvento: React.FC = () => {
           setEventoOriginal(evento);
           
           // Preencher formulário com dados do evento
+          const horariosPorDiaForm: any = {};
+          if (evento.horariosPorDia && evento.horariosPorDia.length > 0) {
+            evento.horariosPorDia.forEach((horario: any) => {
+              horariosPorDiaForm[horario.dia] = {
+                horarioAbertura: horario.horarioAbertura ? dayjs(horario.horarioAbertura, 'HH:mm') : undefined,
+                horarioFechamento: horario.horarioFechamento ? dayjs(horario.horarioFechamento, 'HH:mm') : undefined,
+                preco: horario.preco || 'gratuito',
+                valorEntrada: horario.valorEntrada || undefined,
+              };
+            });
+          }
+          
           form.setFieldsValue({
             nome: evento.nome,
             descricao: evento.descricao,
@@ -56,6 +71,7 @@ const AdicionarEvento: React.FC = () => {
             imagem: evento.imagem,
             recorrente: evento.recorrente,
             diasSemana: evento.diasSemana,
+            horariosPorDia: horariosPorDiaForm,
             generoMusical: evento.generoMusical,
             tipoComida: evento.tipoComida,
             temBrinquedoteca: evento.temBrinquedoteca,
@@ -153,23 +169,86 @@ const AdicionarEvento: React.FC = () => {
         }
       }
 
+      // Preparar horários por dia se for recorrente (obrigatório para eventos recorrentes)
+      let horariosPorDia = undefined;
+      if (isRecorrente && values.diasSemana && values.diasSemana.length > 0) {
+        if (!values.horariosPorDia) {
+          throw new Error('Horários por dia são obrigatórios para eventos recorrentes');
+        }
+        
+        horariosPorDia = values.diasSemana.map((dia: number) => {
+          const horarioDia = values.horariosPorDia[dia];
+          if (!horarioDia || !horarioDia.horarioAbertura || !horarioDia.horarioFechamento) {
+            throw new Error(`Horários são obrigatórios para ${['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dia]}`);
+          }
+          
+          let horarioAberturaDia: string;
+          let horarioFechamentoDia: string;
+          
+          if (typeof horarioDia.horarioAbertura === 'string') {
+            horarioAberturaDia = horarioDia.horarioAbertura;
+          } else if (horarioDia.horarioAbertura.format) {
+            horarioAberturaDia = horarioDia.horarioAbertura.format('HH:mm');
+          } else {
+            horarioAberturaDia = dayjs(horarioDia.horarioAbertura).format('HH:mm');
+          }
+          
+          if (typeof horarioDia.horarioFechamento === 'string') {
+            horarioFechamentoDia = horarioDia.horarioFechamento;
+          } else if (horarioDia.horarioFechamento.format) {
+            horarioFechamentoDia = horarioDia.horarioFechamento.format('HH:mm');
+          } else {
+            horarioFechamentoDia = dayjs(horarioDia.horarioFechamento).format('HH:mm');
+          }
+          
+          // Processar tipo de entrada e valor por dia
+          const precoDia = horarioDia.preco || 'gratuito';
+          let valorEntradaDia: number | undefined = undefined;
+          
+          if (precoDia === 'pago') {
+            if (!horarioDia.valorEntrada || (typeof horarioDia.valorEntrada === 'string' && horarioDia.valorEntrada.trim() === '')) {
+              throw new Error(`Valor de entrada é obrigatório para ${['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dia]} quando o tipo é "Pago"`);
+            }
+            
+            const numValue = typeof horarioDia.valorEntrada === 'string' ? parseFloat(horarioDia.valorEntrada) : horarioDia.valorEntrada;
+            if (isNaN(numValue) || numValue <= 0) {
+              throw new Error(`Valor de entrada inválido para ${['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dia]}`);
+            }
+            valorEntradaDia = numValue;
+          }
+          
+          return {
+            dia,
+            horarioAbertura: horarioAberturaDia,
+            horarioFechamento: horarioFechamentoDia,
+            preco: precoDia,
+            valorEntrada: valorEntradaDia
+          };
+        });
+      }
+
       // Preparar dados do evento com latitude e longitude
+      // Para eventos recorrentes, usar horário padrão temporário (será ignorado pelo backend)
+      const horarioAberturaFinal = isRecorrente ? '00:00' : horarioAbertura;
+      const horarioFechamentoFinal = isRecorrente ? '00:00' : horarioFechamento;
+      
       const dadosEvento = {
         nome: values.nome,
         descricao: values.descricao || '',
         tipo: values.tipo,
         data: isRecorrente ? undefined : values.data?.toISOString(),
         turno: turno,
-        horarioAbertura: horarioAbertura,
-        horarioFechamento: horarioFechamento,
-        preco: values.preco,
-        valorEntrada: valorEntrada,
+        horarioAbertura: horarioAberturaFinal,
+        horarioFechamento: horarioFechamentoFinal,
+        preco: isRecorrente ? undefined : values.preco, // Não enviar tipo de entrada padrão se for recorrente
+        valorEntrada: isRecorrente ? undefined : valorEntrada, // Não enviar valor de entrada padrão se for recorrente
         endereco: values.endereco,
         localizacao: localizacaoEndereco, // Objeto com latitude e longitude do autocomplete
         imagem: values.imagem || undefined,
         avaliacao: 0, // Inicia com 0, será atualizada pelos votos dos usuários
         recorrente: isRecorrente,
         diasSemana: isRecorrente ? values.diasSemana : undefined,
+        horariosPorDia: horariosPorDia,
         generoMusical: values.generoMusical && values.generoMusical.length > 0 ? values.generoMusical : undefined,
         tipoComida: values.tipoComida || undefined,
         temBrinquedoteca: values.temBrinquedoteca || undefined,
@@ -183,7 +262,6 @@ const AdicionarEvento: React.FC = () => {
         console.warn('⚠️  Localização não disponível - backend fará geocodificação do endereço');
       }
 
-      const { apiPost } = await import('../utils/api');
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
       // Se for sugestão, enviar para API de sugestões
@@ -204,19 +282,30 @@ const AdicionarEvento: React.FC = () => {
         if (values.recorrente) {
           alteracoes.recorrente = true;
           alteracoes.diasSemana = values.diasSemana || [];
+          alteracoes.horariosPorDia = horariosPorDia; // Incluir horários por dia
           alteracoes.data = undefined;
         } else {
           alteracoes.recorrente = false;
           alteracoes.data = values.data ? values.data.toISOString() : undefined;
           alteracoes.diasSemana = undefined;
+          alteracoes.horariosPorDia = undefined;
         }
         
-        // Horários
-        alteracoes.horarioAbertura = horarioAbertura;
-        alteracoes.horarioFechamento = horarioFechamento;
+        // Horários (padrão para eventos não recorrentes, não enviar se for recorrente)
+        if (!values.recorrente) {
+          alteracoes.horarioAbertura = horarioAbertura;
+          alteracoes.horarioFechamento = horarioFechamento;
+        } else {
+          alteracoes.horarioAbertura = undefined;
+          alteracoes.horarioFechamento = undefined;
+        }
         
-        // Preço e valor de entrada
-        alteracoes.preco = values.preco;
+        // Preço e valor de entrada (padrão para eventos não recorrentes, não enviar se for recorrente)
+        if (!values.recorrente) {
+          alteracoes.preco = values.preco;
+        } else {
+          alteracoes.preco = undefined;
+        }
         
         // Calcular valorEntrada
         let valorEntradaSugestao = undefined;
@@ -227,7 +316,7 @@ const AdicionarEvento: React.FC = () => {
           }
         }
         
-        if (values.preco === 'pago' && valorEntradaSugestao !== undefined) {
+        if (values.preco === 'pago' && valorEntradaSugestao !== undefined && valorEntradaSugestao > 0) {
           alteracoes.valorEntrada = valorEntradaSugestao;
         } else {
           alteracoes.valorEntrada = undefined;
@@ -261,8 +350,6 @@ const AdicionarEvento: React.FC = () => {
 
         // Criar sugestão
         // Se houver imagem, enviar como FormData
-        const { apiPost } = await import('../utils/api');
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         const comentario = values.comentario || '';
         
         if (fileList.length > 0 && fileList[0].originFileObj) {
@@ -293,6 +380,7 @@ const AdicionarEvento: React.FC = () => {
           await response.json();
         } else {
           // Sem imagem, enviar JSON normalmente
+          const { apiPost } = await import('../utils/api');
           await apiPost('/api/sugestoes', {
             eventoId: eventoOriginal.id,
             alteracoes,
@@ -351,21 +439,23 @@ const AdicionarEvento: React.FC = () => {
         }
         
         novoEvento = await response.json();
+        
+        // Verificar se o evento foi aprovado automaticamente (admin) ou se precisa de aprovação (user)
+        if (novoEvento && novoEvento.aprovado === 'aprovado') {
+          message.success('Evento adicionado e aprovado com sucesso!');
+        } else {
+          message.success('Evento adicionado com sucesso! Aguarde aprovação de um administrador para que ele apareça na lista.');
+        }
+        
+        // Navegar - o contexto vai recarregar os eventos automaticamente
+        navigate('/');
       } else {
-        // Sem imagem, enviar JSON normalmente
-        novoEvento = await apiPost('/api/eventos', dadosEvento, { requireAuth: true });
-      }
-
-      // Verificar se o evento foi aprovado automaticamente (admin) ou se precisa de aprovação (user)
-      if (novoEvento && novoEvento.aprovado === 'aprovado') {
-        message.success('Evento adicionado e aprovado com sucesso!');
-      } else {
+        // Sem imagem, usar o contexto que já faz a chamada à API
+        // O adicionarEvento já faz tudo: chama API, atualiza estado e recarrega eventos
+        await adicionarEvento(dadosEvento);
         message.success('Evento adicionado com sucesso! Aguarde aprovação de um administrador para que ele apareça na lista.');
+        navigate('/');
       }
-      
-      // Adicionar evento ao contexto também
-      await adicionarEvento(dadosEvento);
-      navigate('/');
     } catch (error: any) {
       const errorMessage = error.message || 'Erro ao adicionar evento';
       
@@ -410,7 +500,6 @@ const AdicionarEvento: React.FC = () => {
   };
 
   const precoOptions = [
-    { value: 'sem-entrada', label: '🚫 Sem entrada' },
     { value: 'gratuito', label: '🆓 Entrada grátis' },
     { value: 'pago', label: '💵 Entrada paga' },
   ];
@@ -430,7 +519,7 @@ const AdicionarEvento: React.FC = () => {
             onFinish={onFinish}
             initialValues={{
               tipo: 'show',
-              preco: 'sem-entrada',
+              preco: 'gratuito',
               recorrente: false,
               horarioAbertura: dayjs('20:00', 'HH:mm'),
               horarioFechamento: dayjs('02:00', 'HH:mm'),
@@ -617,26 +706,159 @@ const AdicionarEvento: React.FC = () => {
                 const isRecorrente = getFieldValue('recorrente');
                 
                 return isRecorrente ? (
-                  <Form.Item
-                    name="diasSemana"
-                    label={<span style={{ color: '#FFFFFF', fontWeight: 600 }}>Dias da Semana</span>}
-                    rules={[
-                      { required: true, message: 'Por favor, selecione pelo menos um dia da semana!' },
-                      { type: 'array', min: 1, message: 'Selecione pelo menos um dia!' }
-                    ]}
-                  >
-                    <Checkbox.Group style={{ width: '100%' }}>
-                      <Space direction="vertical" style={{ width: '100%' }}>
-                        <Checkbox value={0} style={{ color: '#FFFFFF' }}>Domingo</Checkbox>
-                        <Checkbox value={1} style={{ color: '#FFFFFF' }}>Segunda-feira</Checkbox>
-                        <Checkbox value={2} style={{ color: '#FFFFFF' }}>Terça-feira</Checkbox>
-                        <Checkbox value={3} style={{ color: '#FFFFFF' }}>Quarta-feira</Checkbox>
-                        <Checkbox value={4} style={{ color: '#FFFFFF' }}>Quinta-feira</Checkbox>
-                        <Checkbox value={5} style={{ color: '#FFFFFF' }}>Sexta-feira</Checkbox>
-                        <Checkbox value={6} style={{ color: '#FFFFFF' }}>Sábado</Checkbox>
-                      </Space>
-                    </Checkbox.Group>
-                  </Form.Item>
+                  <>
+                    <Form.Item
+                      name="diasSemana"
+                      label={<span style={{ color: '#FFFFFF', fontWeight: 600 }}>Dias da Semana</span>}
+                      rules={[
+                        { required: true, message: 'Por favor, selecione pelo menos um dia da semana!' },
+                        { type: 'array', min: 1, message: 'Selecione pelo menos um dia!' }
+                      ]}
+                    >
+                      <Checkbox.Group style={{ width: '100%' }}>
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <Checkbox value={0} style={{ color: '#FFFFFF' }}>Domingo</Checkbox>
+                          <Checkbox value={1} style={{ color: '#FFFFFF' }}>Segunda-feira</Checkbox>
+                          <Checkbox value={2} style={{ color: '#FFFFFF' }}>Terça-feira</Checkbox>
+                          <Checkbox value={3} style={{ color: '#FFFFFF' }}>Quarta-feira</Checkbox>
+                          <Checkbox value={4} style={{ color: '#FFFFFF' }}>Quinta-feira</Checkbox>
+                          <Checkbox value={5} style={{ color: '#FFFFFF' }}>Sexta-feira</Checkbox>
+                          <Checkbox value={6} style={{ color: '#FFFFFF' }}>Sábado</Checkbox>
+                        </Space>
+                      </Checkbox.Group>
+                    </Form.Item>
+                    
+                    {/* Horários individualizados por dia */}
+                    {diasSemanaSelecionados.length > 0 && (
+                      <Form.Item
+                        label={<span style={{ color: '#FFFFFF', fontWeight: 600 }}>Horários por Dia</span>}
+                      >
+                        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                          {diasSemanaSelecionados.map((dia: number) => {
+                            const diasNomes = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+                            return (
+                              <Card 
+                                key={dia} 
+                                size="small" 
+                                style={{ 
+                                  background: 'rgba(255, 255, 255, 0.1)', 
+                                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                                  marginBottom: '8px'
+                                }}
+                              >
+                                <Space direction="vertical" style={{ width: '100%' }} size="small">
+                                  <Typography.Text strong style={{ color: '#FFFFFF', fontSize: '14px' }}>
+                                    {diasNomes[dia]}
+                                  </Typography.Text>
+                                  <Space style={{ width: '100%' }} size="small">
+                                    <Form.Item
+                                      name={['horariosPorDia', dia, 'horarioAbertura']}
+                                      label={<span style={{ color: '#FFFFFF', fontSize: '12px' }}>Abertura</span>}
+                                      style={{ flex: 1, marginBottom: 0 }}
+                                      rules={[{ required: true, message: 'Obrigatório' }]}
+                                    >
+                                      <TimePicker
+                                        size="small"
+                                        style={{ width: '100%' }}
+                                        format="HH:mm"
+                                        placeholder="Abertura"
+                                        allowClear
+                                      />
+                                    </Form.Item>
+                                    <Form.Item
+                                      name={['horariosPorDia', dia, 'horarioFechamento']}
+                                      label={<span style={{ color: '#FFFFFF', fontSize: '12px' }}>Fechamento</span>}
+                                      style={{ flex: 1, marginBottom: 0 }}
+                                      rules={[{ required: true, message: 'Obrigatório' }]}
+                                    >
+                                      <TimePicker
+                                        size="small"
+                                        style={{ width: '100%' }}
+                                        format="HH:mm"
+                                        placeholder="Fechamento"
+                                        allowClear
+                                      />
+                                    </Form.Item>
+                                  </Space>
+                                  
+                                  {/* Tipo de entrada e valor por dia */}
+                                  <Form.Item
+                                    name={['horariosPorDia', dia, 'preco']}
+                                    label={<span style={{ color: '#FFFFFF', fontSize: '12px' }}>Tipo de Entrada</span>}
+                                    style={{ marginBottom: 0 }}
+                                    rules={[{ required: true, message: 'Obrigatório' }]}
+                                  >
+                                    <Select
+                                      size="small"
+                                      style={{ width: '100%' }}
+                                      options={[
+                                        { label: 'Gratuito', value: 'gratuito' },
+                                        { label: 'Pago', value: 'pago' }
+                                      ]}
+                                    />
+                                  </Form.Item>
+                                  
+                                  {/* Valor de entrada por dia (se preco === 'pago') */}
+                                  <Form.Item
+                                    noStyle
+                                    shouldUpdate={(prevValues, currentValues) => {
+                                      const prevPreco = prevValues?.horariosPorDia?.[dia]?.preco;
+                                      const currentPreco = currentValues?.horariosPorDia?.[dia]?.preco;
+                                      return prevPreco !== currentPreco;
+                                    }}
+                                  >
+                                    {({ getFieldValue }) => {
+                                      const precoDia = getFieldValue(['horariosPorDia', dia, 'preco']);
+                                      if (precoDia === 'pago') {
+                                        return (
+                                          <Form.Item
+                                            name={['horariosPorDia', dia, 'valorEntrada']}
+                                            label={<span style={{ color: '#FFFFFF', fontSize: '12px' }}>Valor de Entrada (R$)</span>}
+                                            style={{ marginBottom: 0 }}
+                                            rules={[
+                                              { required: true, message: 'Obrigatório' },
+                                              { 
+                                                validator: (_, value) => {
+                                                  if (!value && value !== 0) {
+                                                    return Promise.reject(new Error('Obrigatório'));
+                                                  }
+                                                  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+                                                  if (isNaN(numValue) || numValue <= 0) {
+                                                    return Promise.reject(new Error('Valor deve ser positivo'));
+                                                  }
+                                                  return Promise.resolve();
+                                                }
+                                              }
+                                            ]}
+                                            normalize={(value) => {
+                                              if (!value && value !== 0) return undefined;
+                                              const numValue = typeof value === 'string' ? parseFloat(value) : value;
+                                              return isNaN(numValue) ? undefined : numValue;
+                                            }}
+                                          >
+                                            <Input
+                                              type="number"
+                                              size="small"
+                                              placeholder="0.00"
+                                              step="0.01"
+                                              min="0"
+                                              prefix="R$"
+                                              style={{ width: '100%' }}
+                                            />
+                                          </Form.Item>
+                                        );
+                                      }
+                                      return null;
+                                    }}
+                                  </Form.Item>
+                                </Space>
+                              </Card>
+                            );
+                          })}
+                        </Space>
+                      </Form.Item>
+                    )}
+                  </>
                 ) : (
                   <Form.Item
               name="data"
@@ -656,50 +878,88 @@ const AdicionarEvento: React.FC = () => {
             </Form.Item>
 
             <Form.Item
-              name="horarioAbertura"
-              label={<span style={{ color: '#FFFFFF', fontWeight: 600 }}>Horário de Abertura</span>}
-              rules={[{ required: true, message: 'Por favor, selecione o horário de abertura!' }]}
-              getValueFromEvent={(value) => value}
+              noStyle
+              shouldUpdate={(prevValues, currentValues) => prevValues.recorrente !== currentValues.recorrente}
             >
-              <TimePicker
-                size="large"
-                style={{ width: '100%' }}
-                format="HH:mm"
-                placeholder="Selecione o horário"
-                allowClear
-              />
-            </Form.Item>
+              {({ getFieldValue }) => {
+                const isRecorrente = getFieldValue('recorrente');
+                
+                // Se for recorrente, não mostrar horários padrão
+                if (isRecorrente) {
+                  return null;
+                }
+                
+                return (
+                  <>
+                    <Form.Item
+                      name="horarioAbertura"
+                      label={<span style={{ color: '#FFFFFF', fontWeight: 600 }}>Horário de Abertura</span>}
+                      rules={[{ required: true, message: 'Por favor, selecione o horário de abertura!' }]}
+                      getValueFromEvent={(value) => value}
+                    >
+                      <TimePicker
+                        size="large"
+                        style={{ width: '100%' }}
+                        format="HH:mm"
+                        placeholder="Selecione o horário"
+                        allowClear
+                      />
+                    </Form.Item>
 
-            <Form.Item
-              name="horarioFechamento"
-              label={<span style={{ color: '#FFFFFF', fontWeight: 600 }}>Horário de Fechamento</span>}
-              rules={[{ required: true, message: 'Por favor, selecione o horário de fechamento!' }]}
-              getValueFromEvent={(value) => value}
-            >
-              <TimePicker
-                size="large"
-                style={{ width: '100%' }}
-                format="HH:mm"
-                placeholder="Selecione o horário"
-                allowClear
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="preco"
-              label={<span style={{ color: '#FFFFFF', fontWeight: 600 }}>Tipo de Entrada</span>}
-              rules={[{ required: true, message: 'Por favor, selecione o tipo de entrada!' }]}
-            >
-              <Select size="large" options={precoOptions} />
+                    <Form.Item
+                      name="horarioFechamento"
+                      label={<span style={{ color: '#FFFFFF', fontWeight: 600 }}>Horário de Fechamento</span>}
+                      rules={[{ required: true, message: 'Por favor, selecione o horário de fechamento!' }]}
+                      getValueFromEvent={(value) => value}
+                    >
+                      <TimePicker
+                        size="large"
+                        style={{ width: '100%' }}
+                        format="HH:mm"
+                        placeholder="Selecione o horário"
+                        allowClear
+                      />
+                    </Form.Item>
+                  </>
+                );
+              }}
             </Form.Item>
 
             <Form.Item
               noStyle
-              shouldUpdate={(prevValues, currentValues) => prevValues.preco !== currentValues.preco}
+              shouldUpdate={(prevValues, currentValues) => prevValues.recorrente !== currentValues.recorrente}
+            >
+              {({ getFieldValue }) => {
+                const isRecorrente = getFieldValue('recorrente');
+                
+                // Se for recorrente, não mostrar tipo de entrada padrão
+                if (isRecorrente) {
+                  return null;
+                }
+                
+                return (
+                  <Form.Item
+                    name="preco"
+                    label={<span style={{ color: '#FFFFFF', fontWeight: 600 }}>Tipo de Entrada</span>}
+                    rules={[{ required: true, message: 'Por favor, selecione o tipo de entrada!' }]}
+                  >
+                    <Select size="large" options={precoOptions} />
+                  </Form.Item>
+                );
+              }}
+            </Form.Item>
+
+            <Form.Item
+              noStyle
+              shouldUpdate={(prevValues, currentValues) => 
+                prevValues.preco !== currentValues.preco || 
+                prevValues.recorrente !== currentValues.recorrente
+              }
             >
               {({ getFieldValue }) => {
                 const preco = getFieldValue('preco');
-                const mostraValorExato = preco === 'pago';
+                const isRecorrente = getFieldValue('recorrente');
+                const mostraValorExato = preco === 'pago' && !isRecorrente;
                 
                 return mostraValorExato ? (
                   <Form.Item

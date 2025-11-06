@@ -19,6 +19,20 @@
   flex-direction: column;
 }
 
+.home-lista-container {
+  flex: 1;
+  position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+}
+
+.pull-to-refresh-indicator {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 20px;
+  pointer-events: none;
+}
+
 .home-filtros {
   margin-bottom: 1.5rem;
   display: flex;

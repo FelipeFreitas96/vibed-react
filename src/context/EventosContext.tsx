@@ -14,6 +14,7 @@ interface EventosContextType {
   ordenacao: TipoOrdenacao;
   setOrdenacao: (ordenacao: TipoOrdenacao) => void;
   carregarLocalizacao: () => Promise<void>;
+  carregarEventos: () => Promise<void>;
   buscarEventoPorId: (id: string) => Promise<Evento | undefined>;
   votarEvento: (eventoId: string, nota: number) => Promise<void>;
   obterMeuVoto: (eventoId: string) => Promise<number | null>;
@@ -100,16 +101,7 @@ export const EventosProvider: React.FC<EventosProviderProps> = ({ children }) =>
       setEventos(eventosFormatados);
     } catch (error) {
       console.error('Erro ao carregar eventos:', error);
-      // Em caso de erro, manter eventos vazios ou usar cache do localStorage
-      const eventosSalvos = localStorage.getItem('vibed-eventos');
-      if (eventosSalvos) {
-        try {
-          const eventos = JSON.parse(eventosSalvos);
-          setEventos(eventos);
-        } catch (e) {
-          console.error('Erro ao carregar eventos do cache:', e);
-        }
-      }
+      // Em caso de erro, manter eventos vazios
     } finally {
       setIsLoading(false);
     }
@@ -174,12 +166,6 @@ export const EventosProvider: React.FC<EventosProviderProps> = ({ children }) =>
     setVotos(votosObj);
   };
 
-  // Salvar eventos no localStorage como cache
-  useEffect(() => {
-    if (eventos.length > 0) {
-    localStorage.setItem('vibed-eventos', JSON.stringify(eventos));
-    }
-  }, [eventos]);
 
   // Salvar votos no localStorage como cache
   useEffect(() => {
@@ -195,11 +181,25 @@ export const EventosProvider: React.FC<EventosProviderProps> = ({ children }) =>
       // Criar evento via API
       const novoEvento = await apiPost('/api/eventos', eventoData, { requireAuth: true });
       
-      // Adicionar ao estado local
-      setEventos((prev) => [...prev, novoEvento]);
+      // Formatar URL da imagem se houver
+      const { formatarUrlImagem } = await import('../utils/api');
+      const eventoFormatado = {
+        ...novoEvento,
+        imagem: formatarUrlImagem(novoEvento.imagem),
+      };
       
-      // Recarregar eventos para garantir sincronização
-      await carregarEventos();
+      // Adicionar ao estado local (sem recarregar tudo para evitar duplicação)
+      setEventos((prev) => {
+        // Verificar se o evento já existe para evitar duplicação
+        const existe = prev.find(e => e.id === eventoFormatado.id);
+        if (existe) {
+          return prev; // Já existe, não adicionar novamente
+        }
+        return [...prev, eventoFormatado];
+      });
+      
+      // Não recarregar eventos aqui para evitar duplicação
+      // O evento já foi adicionado ao estado local acima
     } catch (error) {
       console.error('Erro ao criar evento:', error);
       throw error;
@@ -328,20 +328,24 @@ export const EventosProvider: React.FC<EventosProviderProps> = ({ children }) =>
           return false;
         }
       }
-      // Filtrar por data (apenas eventos pontuais)
+      // Filtrar por data
       if (filtros.data) {
         if (evento.recorrente) {
-          // Para eventos recorrentes, verificar se a data filtrada corresponde a um dos dias da semana
-          const dataFiltro = new Date(filtros.data);
-          const diaSemanaFiltro = dataFiltro.getDay();
+          // Para eventos recorrentes, usar apenas o dia da semana da data selecionada
+          // Extrair o dia da semana da data selecionada (não usar a data específica)
+          const [ano, mes, dia] = filtros.data.split('-').map(Number);
+          const dataFiltro = new Date(ano, mes - 1, dia); // mes - 1 porque Date usa 0-11
+          const diaSemanaFiltro = dataFiltro.getDay(); // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
+          
+          // Verificar se o evento ocorre no dia da semana correspondente à data selecionada
           if (!evento.diasSemana || !evento.diasSemana.includes(diaSemanaFiltro as any)) {
             return false;
           }
         } else {
-          // Para eventos pontuais, verificar se a data corresponde
+          // Para eventos pontuais, verificar se a data corresponde exatamente
           if (!evento.data) return false;
-        const eventoData = new Date(evento.data).toISOString().split('T')[0];
-        if (eventoData !== filtros.data) return false;
+          const eventoData = new Date(evento.data).toISOString().split('T')[0];
+          if (eventoData !== filtros.data) return false;
         }
       }
 
@@ -400,18 +404,35 @@ export const EventosProvider: React.FC<EventosProviderProps> = ({ children }) =>
       if (filtros.preco) {
         const filtroPreco = filtros.preco as PrecoFiltro;
         
-        if (filtroPreco === 'sem-entrada' && evento.preco !== 'sem-entrada' && evento.preco !== 'gratuito') return false;
+        // Se uma data específica foi selecionada e o evento é recorrente, usar o preço do dia específico
+        let precoEvento: string = evento.preco;
+        let valorEntradaEvento: number | undefined = evento.valorEntrada;
         
-        if (filtroPreco === 'ate-50' && evento.preco === 'pago') {
-          if (!evento.valorEntrada || evento.valorEntrada > 50) return false;
+        if (filtros.data && evento.recorrente && evento.horariosPorDia && evento.horariosPorDia.length > 0) {
+          // Usar uma forma segura que não depende de timezone
+          const [ano, mes, dia] = filtros.data.split('-').map(Number);
+          const dataFiltro = new Date(ano, mes - 1, dia); // mes - 1 porque Date usa 0-11
+          const diaSemanaFiltro = dataFiltro.getDay();
+          const horarioDia = evento.horariosPorDia.find((h: any) => h.dia === diaSemanaFiltro);
+          
+          if (horarioDia) {
+            precoEvento = horarioDia.preco || 'gratuito';
+            valorEntradaEvento = horarioDia.valorEntrada;
+          }
         }
-        if (filtroPreco === 'ate-100' && evento.preco === 'pago') {
-          if (!evento.valorEntrada || evento.valorEntrada > 100) return false;
+        
+        if (filtroPreco === 'gratuito' && precoEvento !== 'gratuito') return false;
+        
+        if (filtroPreco === 'ate-50' && precoEvento === 'pago') {
+          if (!valorEntradaEvento || valorEntradaEvento > 50) return false;
         }
-        if (filtroPreco === 'ate-200' && evento.preco === 'pago') {
-          if (!evento.valorEntrada || evento.valorEntrada > 200) return false;
+        if (filtroPreco === 'ate-100' && precoEvento === 'pago') {
+          if (!valorEntradaEvento || valorEntradaEvento > 100) return false;
         }
-        if (filtroPreco === 'qualquer-valor' && evento.preco !== 'pago') return false;
+        if (filtroPreco === 'ate-200' && precoEvento === 'pago') {
+          if (!valorEntradaEvento || valorEntradaEvento > 200) return false;
+        }
+        if (filtroPreco === 'qualquer-valor' && precoEvento !== 'pago') return false;
       }
 
       // Filtrar por busca textual
@@ -449,8 +470,8 @@ export const EventosProvider: React.FC<EventosProviderProps> = ({ children }) =>
         
         case 'preco':
           // Ordenar por preço (menor para maior)
-          const valorA = a.preco === 'sem-entrada' ? 0 : a.preco === 'gratuito' ? 0 : (a.valorEntrada || 999999);
-          const valorB = b.preco === 'sem-entrada' ? 0 : b.preco === 'gratuito' ? 0 : (b.valorEntrada || 999999);
+          const valorA = a.preco === 'gratuito' ? 0 : (a.valorEntrada || 999999);
+          const valorB = b.preco === 'gratuito' ? 0 : (b.valorEntrada || 999999);
           return valorA - valorB;
         
         case 'data':
@@ -485,6 +506,7 @@ export const EventosProvider: React.FC<EventosProviderProps> = ({ children }) =>
         ordenacao,
         setOrdenacao,
         carregarLocalizacao,
+        carregarEventos,
         buscarEventoPorId,
         votarEvento,
         obterMeuVoto,

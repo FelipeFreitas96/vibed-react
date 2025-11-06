@@ -91,7 +91,7 @@ const VerSugestao: React.FC = () => {
       case 'preco':
         if (valor === 'pago') return '💵 Entrada paga';
         if (valor === 'gratuito') return '🆓 Entrada grátis';
-        if (valor === 'sem-entrada') return '🚫 Sem entrada';
+        // Removido 'sem-entrada', agora só existe 'gratuito' e 'pago'
         return valor;
       case 'publico':
         return valor === 'LGBT' ? '🏳️‍🌈 LGBT' : '👥 Hetero';
