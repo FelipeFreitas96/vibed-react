@@ -32,39 +32,66 @@ const Home: React.FC = () => {
     const container = containerRef.current;
     if (!container) return;
 
+    let touchStartY = 0;
+
     const handleTouchStart = (e: TouchEvent) => {
       const scrollTop = container.scrollTop;
+      // Só ativar pull-to-refresh se estiver exatamente no topo
       if (scrollTop === 0) {
-        startYRef.current = e.touches[0].clientY;
+        touchStartY = e.touches[0].clientY;
+        startYRef.current = touchStartY;
         isPullingRef.current = true;
+      } else {
+        isPullingRef.current = false;
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!isPullingRef.current) return;
-      
       const scrollTop = container.scrollTop;
-      if (scrollTop > 0) {
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5; // Margem de 5px
+      
+      // Se não estiver no topo, não interferir no scroll
+      if (scrollTop > 0 || isAtBottom) {
+        if (isPullingRef.current) {
+          isPullingRef.current = false;
+          setPullDistance(0);
+        }
+        // Não prevenir default - permite scroll normal
+        return;
+      }
+
+      // Só processar pull-to-refresh se estiver no topo
+      if (!isPullingRef.current) return;
+
+      const currentY = e.touches[0].clientY;
+      const distance = currentY - touchStartY;
+      
+      // Se estiver movendo para cima (scroll normal), cancelar pull-to-refresh
+      if (distance < 0) {
         isPullingRef.current = false;
         setPullDistance(0);
         return;
       }
-
-      currentYRef.current = e.touches[0].clientY;
-      const distance = currentYRef.current - startYRef.current;
       
-      if (distance > 0) {
+      // Só prevenir default se estiver puxando para baixo (pull-to-refresh) e no topo
+      if (distance > 0 && scrollTop === 0) {
         e.preventDefault();
-        const maxDistance = 120; // Aumentado de 80 para 120px
+        const maxDistance = 120;
         const normalizedDistance = Math.min(distance, maxDistance);
         setPullDistance(normalizedDistance);
+        currentYRef.current = currentY;
       }
     };
 
     const handleTouchEnd = () => {
-      if (!isPullingRef.current) return;
+      if (!isPullingRef.current) {
+        setPullDistance(0);
+        return;
+      }
       
-      const threshold = 100; // Aumentado de 50 para 100px para ser menos sensível
+      const threshold = 100;
       if (pullDistance >= threshold && !isRefreshingState) {
         handleRefresh();
       } else {
@@ -74,9 +101,10 @@ const Home: React.FC = () => {
       isPullingRef.current = false;
     };
 
-    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    // Usar passive: true para melhor performance, exceto quando realmente precisar prevenir default
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
     container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('touchend', handleTouchEnd);
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
       container.removeEventListener('touchstart', handleTouchStart);

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button, Card, Space, Typography, Tag, Rate, Empty, message, Dropdown, MenuProps, Modal, Upload, Image } from 'antd';
+import { Button, Card, Space, Typography, Tag, Rate, Empty, message, Dropdown, MenuProps, Modal, Upload, Image, Select } from 'antd';
 import { 
   ArrowLeftOutlined,
-  CalendarOutlined,
   ClockCircleOutlined,
   DollarOutlined,
   EnvironmentOutlined,
@@ -12,12 +11,16 @@ import {
   EditOutlined,
   MoreOutlined,
   PictureOutlined,
-  PlusOutlined
+  PlusOutlined,
+  WarningOutlined,
+  TrophyOutlined,
+  InfoCircleOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import { useEventos } from '../context/EventosContext';
 import { useAuth } from '../context/AuthContext';
 import { formatarDistancia, calcularDistancia } from '../utils/geolocalizacao';
-import { apiGet } from '../utils/api';
+import { apiGet, apiDelete } from '../utils/api';
 import Header from '../components/Header';
 import './DetalhesEvento.css';
 
@@ -35,6 +38,10 @@ const DetalhesEvento: React.FC = () => {
   const [isLoadingFotos, setIsLoadingFotos] = useState(false);
   const [modalFotos, setModalFotos] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
+  const [categoriaFoto, setCategoriaFoto] = useState<string>('interior');
+  const [vaiGanharRecompensa, setVaiGanharRecompensa] = useState<boolean>(true);
+  const [fotosNaCategoria, setFotosNaCategoria] = useState<number>(0);
+  const [limiteCategoria, setLimiteCategoria] = useState<number>(3);
   const [distanciaAtual, setDistanciaAtual] = useState<number | null>(null);
   const [podeAvaliar, setPodeAvaliar] = useState(false);
 
@@ -101,6 +108,41 @@ const DetalhesEvento: React.FC = () => {
     
     carregarFotos();
   }, [id]);
+
+  // Limites por categoria
+  const limitesPorCategoria: Record<string, number> = {
+    cardapio: 5,
+    fachada: 1,
+    interior: 3
+  };
+
+  // Verificar se vai ganhar recompensa e contar fotos na categoria
+  useEffect(() => {
+    if (!id || !categoriaFoto) {
+      setVaiGanharRecompensa(true);
+      setFotosNaCategoria(0);
+      setLimiteCategoria(limitesPorCategoria[categoriaFoto] || 3);
+      return;
+    }
+
+    // Contar fotos aprovadas nesta categoria para este evento
+    const fotosNaCategoriaAtual = fotos.filter(
+      (foto) => foto.categoria === categoriaFoto
+    ).length;
+
+    setFotosNaCategoria(fotosNaCategoriaAtual);
+    setLimiteCategoria(limitesPorCategoria[categoriaFoto] || 3);
+
+    // Verificar se o usuário já tem foto aprovada nesta categoria para este evento
+    if (user) {
+      const jaTemFotoNaCategoria = fotos.some(
+        (foto) => foto.usuarioId === user.id && foto.categoria === categoriaFoto
+      );
+      setVaiGanharRecompensa(!jaTemFotoNaCategoria);
+    } else {
+      setVaiGanharRecompensa(true);
+    }
+  }, [categoriaFoto, fotos, user, id]);
 
   // Verificar distância e se pode avaliar
   useEffect(() => {
@@ -184,34 +226,6 @@ const DetalhesEvento: React.FC = () => {
     );
   }
 
-  const formatarData = (evento: any) => {
-    if (evento.recorrente && evento.diasSemana) {
-      const diasNomes = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-      const diasSelecionados = evento.diasSemana
-        .sort((a: number, b: number) => a - b)
-        .map((dia: number) => {
-          // Se houver horários por dia, incluir horário no formato
-          if (evento.horariosPorDia && evento.horariosPorDia.length > 0) {
-            const horarioDia = evento.horariosPorDia.find((h: any) => h.dia === dia);
-            if (horarioDia) {
-              return `${diasNomes[dia]} (${horarioDia.horarioAbertura} - ${horarioDia.horarioFechamento})`;
-            }
-          }
-          return diasNomes[dia];
-        })
-        .join(', ');
-      return `${diasSelecionados}`;
-    }
-    if (evento.data) {
-      const data = new Date(evento.data);
-      return data.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-      });
-    }
-    return 'Data não definida';
-  };
 
 
   const formatarTipo = () => {
@@ -277,12 +291,18 @@ const DetalhesEvento: React.FC = () => {
     <div className="detalhes-evento">
       <Header />
       <div className="detalhes-evento-container">
-        <Space direction="horizontal" size="middle" style={{ width: '100%', marginBottom: '1rem', justifyContent: 'space-between' }}>
+        <Space 
+          direction="horizontal" 
+          size="small" 
+          align="center"
+          style={{ width: '100%', marginBottom: '1rem', justifyContent: 'space-between' }}
+        >
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate('/')}
             className="btn-voltar"
             shape="round"
+            size="small"
           >
             Voltar
           </Button>
@@ -308,6 +328,35 @@ const DetalhesEvento: React.FC = () => {
                       setModalFotos(true);
                     }
                   },
+                  ...(user?.nivelAcesso === 'admin' ? [
+                    {
+                      type: 'divider' as const,
+                    },
+                    {
+                      key: 'deletar-evento',
+                      label: 'Deletar Evento',
+                      icon: <DeleteOutlined />,
+                      danger: true,
+                      onClick: () => {
+                        Modal.confirm({
+                          title: 'Deletar Evento',
+                          content: 'Tem certeza que deseja deletar este evento? Esta ação não pode ser desfeita.',
+                          okText: 'Deletar',
+                          okType: 'danger',
+                          cancelText: 'Cancelar',
+                          onOk: async () => {
+                            try {
+                              await apiDelete(`/api/eventos/${id}`, { requireAuth: true });
+                              message.success('Evento deletado com sucesso!');
+                              navigate('/');
+                            } catch (error: any) {
+                              message.error(error.message || 'Erro ao deletar evento');
+                            }
+                          }
+                        });
+                      }
+                    }
+                  ] : [])
                 ] as MenuProps['items']
               }}
               placement="bottomRight"
@@ -444,24 +493,6 @@ const DetalhesEvento: React.FC = () => {
             )}
 
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-              {/* Data */}
-              <Card 
-                size="small" 
-                style={{ 
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                }}
-              >
-                <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                  <Text strong style={{ color: '#FFFFFF', fontSize: 14 }}>
-                    <CalendarOutlined /> Data
-                  </Text>
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 16 }}>
-                    {formatarData(evento)}
-                  </Text>
-                </Space>
-              </Card>
-
               {/* Horários */}
               <Card 
                 size="small" 
@@ -746,15 +777,41 @@ const DetalhesEvento: React.FC = () => {
 
       {/* Modal para adicionar fotos */}
       <Modal
-        title="Adicionar Fotos"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <PictureOutlined style={{ fontSize: 20, color: '#5B2EFF' }} />
+            <span style={{ fontSize: 18, fontWeight: 600 }}>Adicionar Fotos</span>
+          </div>
+        }
         open={modalFotos}
         onCancel={() => {
           setModalFotos(false);
           setFileList([]);
+          setCategoriaFoto('interior');
+          setVaiGanharRecompensa(true);
+          setFotosNaCategoria(0);
+          setLimiteCategoria(3);
         }}
         onOk={async () => {
           if (fileList.length === 0) {
             message.warning('Selecione pelo menos uma foto');
+            return;
+          }
+
+          if (!categoriaFoto) {
+            message.warning('Selecione uma categoria para a foto');
+            return;
+          }
+
+          // Verificar limite de fotos por categoria
+          const fotosRestantes = limiteCategoria - fotosNaCategoria;
+          if (fotosRestantes <= 0) {
+            message.error(`Limite de ${limiteCategoria} foto(s) atingido para a categoria selecionada!`);
+            return;
+          }
+
+          if (fileList.length > fotosRestantes) {
+            message.warning(`Você pode adicionar apenas ${fotosRestantes} foto(s) nesta categoria. Remova ${fileList.length - fotosRestantes} foto(s) da lista.`);
             return;
           }
 
@@ -770,6 +827,7 @@ const DetalhesEvento: React.FC = () => {
                 const blob = await response.blob();
                 formData.append('imagem', blob, file.name || 'foto.jpg');
               }
+              formData.append('categoria', categoriaFoto);
               
               // Fazer upload usando FormData
               const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/eventos/${id}/fotos`, {
@@ -781,13 +839,15 @@ const DetalhesEvento: React.FC = () => {
               });
               
               if (!response.ok) {
-                throw new Error('Erro ao fazer upload da foto');
+                const errorData = await response.json().catch(() => ({ error: 'Erro ao fazer upload da foto' }));
+                throw new Error(errorData.error || 'Erro ao fazer upload da foto');
               }
             }
             
             message.success('Fotos enviadas com sucesso! Aguarde aprovação de um administrador.');
             setModalFotos(false);
             setFileList([]);
+            setCategoriaFoto('interior');
             
             // Recarregar fotos aprovadas (não inclui fotos pendentes)
             const fotosData = await apiGet(`/api/eventos/${id}/fotos`, { requireAuth: false });
@@ -803,47 +863,190 @@ const DetalhesEvento: React.FC = () => {
             message.error(error.message || 'Erro ao adicionar fotos');
           }
         }}
-        okText="Adicionar"
+        okText="Enviar Fotos"
         cancelText="Cancelar"
         width={600}
+        className="modal-adicionar-fotos"
       >
-        <Upload
-          listType="picture-card"
-          fileList={fileList}
-          onChange={({ fileList: newFileList }) => {
-            setFileList(newFileList);
-          }}
-          onRemove={(file) => {
-            setFileList(prev => prev.filter(f => f.uid !== file.uid));
-          }}
-          beforeUpload={(file) => {
-            // Criar preview local
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const result = e.target?.result as string;
-              const newFile = {
-                uid: file.uid,
-                name: file.name,
-                status: 'done' as const,
-                url: result,
-                thumbUrl: result,
-                originFileObj: file // Manter o arquivo original para upload
-              };
-              setFileList(prev => [...prev, newFile]);
-            };
-            reader.readAsDataURL(file);
-            return false; // Prevent auto upload
-          }}
-          multiple
-          accept="image/*"
-        >
-          {fileList.length >= 10 ? null : (
-            <div>
-              <PlusOutlined />
-              <div style={{ marginTop: 8 }}>Upload</div>
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          {/* Seção de Categoria */}
+          <div>
+            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <TagOutlined style={{ color: '#5B2EFF', fontSize: 16 }} />
+              <Text strong style={{ fontSize: 15 }}>Categoria da foto</Text>
+            </div>
+            <Select
+              value={categoriaFoto}
+              onChange={setCategoriaFoto}
+              style={{ width: '100%' }}
+              size="large"
+              options={[
+                { label: '📋 Cardápio', value: 'cardapio' },
+                { label: '🏢 Fachada', value: 'fachada' },
+                { label: '🏠 Interior', value: 'interior' },
+              ]}
+            />
+          </div>
+
+          {/* Divisor */}
+          <div style={{ 
+            height: 1, 
+            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)',
+            margin: '8px 0'
+          }} />
+
+          {/* Informações da Categoria */}
+          <div style={{
+            background: 'rgba(91, 46, 255, 0.1)',
+            borderRadius: 12,
+            padding: 16,
+            border: '1px solid rgba(91, 46, 255, 0.2)'
+          }}>
+            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <PictureOutlined style={{ color: fotosNaCategoria >= limiteCategoria ? '#ff4d4f' : '#1890ff', fontSize: 16 }} />
+                  <Text style={{ fontSize: 14, color: 'rgba(255, 255, 255, 0.85)' }}>
+                    Fotos nesta categoria
+                  </Text>
+                </div>
+                <Tag 
+                  color={fotosNaCategoria >= limiteCategoria ? 'red' : 'blue'}
+                  style={{ 
+                    margin: 0,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    padding: '4px 12px',
+                    borderRadius: 12
+                  }}
+                >
+                  {fotosNaCategoria} / {limiteCategoria}
+                </Tag>
+              </div>
+              
+              {fotosNaCategoria >= limiteCategoria && (
+                <div style={{ 
+                  marginTop: 8,
+                  padding: 8,
+                  background: 'rgba(255, 77, 79, 0.15)',
+                  borderRadius: 8,
+                  border: '1px solid rgba(255, 77, 79, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  <WarningOutlined style={{ color: '#ff4d4f', fontSize: 14 }} />
+                  <Text type="danger" style={{ fontSize: 12, margin: 0 }}>
+                    Limite de fotos atingido para esta categoria!
+                  </Text>
+                </div>
+              )}
+            </Space>
+          </div>
+
+          {/* Informações de Recompensa */}
+          {user && (
+            <div style={{
+              background: vaiGanharRecompensa 
+                ? 'rgba(82, 196, 26, 0.1)' 
+                : 'rgba(255, 141, 0, 0.1)',
+              borderRadius: 12,
+              padding: 16,
+              border: `1px solid ${vaiGanharRecompensa ? 'rgba(82, 196, 26, 0.2)' : 'rgba(255, 141, 0, 0.2)'}`
+            }}>
+              {vaiGanharRecompensa ? (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <TrophyOutlined style={{ color: '#52c41a', fontSize: 20, marginTop: 2 }} />
+                  <div style={{ flex: 1 }}>
+                    <Text strong style={{ color: '#52c41a', fontSize: 14, display: 'block', marginBottom: 4 }}>
+                      Recompensa Disponível
+                    </Text>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 13, display: 'block' }}>
+                      Você ganhará <strong style={{ color: '#52c41a' }}>+10 pontos</strong> se esta foto for aprovada!
+                    </Text>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <InfoCircleOutlined style={{ color: '#fa8c16', fontSize: 20, marginTop: 2 }} />
+                  <div style={{ flex: 1 }}>
+                    <Text strong style={{ color: '#fa8c16', fontSize: 14, display: 'block', marginBottom: 4 }}>
+                      Sem Recompensa Adicional
+                    </Text>
+                    <Text style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 13, display: 'block' }}>
+                      Você já tem uma foto aprovada nesta categoria. Não ganhará pontos adicionais.
+                    </Text>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </Upload>
+
+          {/* Divisor */}
+          <div style={{ 
+            height: 1, 
+            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)',
+            margin: '8px 0'
+          }} />
+
+          {/* Área de Upload */}
+          <div>
+            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <PlusOutlined style={{ color: '#5B2EFF', fontSize: 16 }} />
+              <Text strong style={{ fontSize: 15 }}>Selecionar Fotos</Text>
+            </div>
+            <Upload
+              listType="picture-card"
+              fileList={fileList}
+              onChange={({ fileList: newFileList }) => {
+                setFileList(newFileList);
+              }}
+              onRemove={(file) => {
+                setFileList(prev => prev.filter(f => f.uid !== file.uid));
+              }}
+              beforeUpload={(file) => {
+                // Criar preview local
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  const result = e.target?.result as string;
+                  const newFile = {
+                    uid: file.uid,
+                    name: file.name,
+                    status: 'done' as const,
+                    url: result,
+                    thumbUrl: result,
+                    originFileObj: file // Manter o arquivo original para upload
+                  };
+                  setFileList(prev => [...prev, newFile]);
+                };
+                reader.readAsDataURL(file);
+                return false; // Prevent auto upload
+              }}
+              multiple
+              accept="image/*"
+              maxCount={limiteCategoria - fotosNaCategoria}
+              className="upload-fotos-custom"
+            >
+              {fileList.length >= (limiteCategoria - fotosNaCategoria) ? null : (
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  height: '100%'
+                }}>
+                  <PlusOutlined style={{ fontSize: 24, color: '#5B2EFF', marginBottom: 8 }} />
+                  <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 13 }}>Adicionar</div>
+                </div>
+              )}
+            </Upload>
+            {limiteCategoria - fotosNaCategoria > 0 && (
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8, textAlign: 'center' }}>
+                Você pode adicionar até {limiteCategoria - fotosNaCategoria} foto(s) restante(s)
+              </Text>
+            )}
+          </div>
+        </Space>
       </Modal>
     </div>
   );

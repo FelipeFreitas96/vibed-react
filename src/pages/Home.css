@@ -23,8 +23,13 @@
   flex: 1;
   position: relative;
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   min-height: 0;
+  max-height: 100%;
+  overscroll-behavior-y: auto;
+  overscroll-behavior-x: none;
+  will-change: scroll-position;
 }
 
 .pull-to-refresh-indicator {

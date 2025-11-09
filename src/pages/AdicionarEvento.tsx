@@ -4,14 +4,18 @@ import { Form, Input, Select, DatePicker, Button, Card, Space, Typography, messa
 import { 
   SaveOutlined, 
   CloseOutlined,
-  PictureOutlined
+  PictureOutlined,
+  LinkOutlined,
+  LoadingOutlined
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import dayjs from 'dayjs';
 import { useEventos } from '../context/EventosContext';
+import { useAuth } from '../context/AuthContext';
 import { Turno, Localizacao } from '../types';
 import Header from '../components/Header';
 import AutocompleteEndereco from '../components/AutocompleteEndereco';
+import { processarLinkGoogle, validarLinkGoogle } from '../utils/googlePlaces';
 import './AdicionarEvento.css';
 
 const { Title } = Typography;
@@ -21,12 +25,17 @@ const AdicionarEvento: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { adicionarEvento } = useEventos();
+  const { user } = useAuth();
   const [form] = Form.useForm();
+  
+  // Verificar se o usuário é admin
+  const isAdmin = user?.nivelAcesso === 'admin';
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [localizacaoEndereco, setLocalizacaoEndereco] = useState<Localizacao | undefined>(undefined);
   const [isSugestao, setIsSugestao] = useState(false);
   const [eventoOriginal, setEventoOriginal] = useState<any>(null);
+  const [processandoLink, setProcessandoLink] = useState(false);
   
   // Observar mudanças no campo tipo
   const tipoSelecionado = Form.useWatch('tipo', form);
@@ -504,6 +513,173 @@ const AdicionarEvento: React.FC = () => {
     { value: 'pago', label: '💵 Entrada paga' },
   ];
 
+  // Função para processar link do Google Maps/Places (APENAS PARA ADMINS)
+  const handleProcessarLinkGoogle = async (link: string) => {
+    // Verificar se o usuário é admin
+    if (!isAdmin) {
+      message.error('Esta funcionalidade está disponível apenas para administradores');
+      return;
+    }
+
+    if (!link || !link.trim()) {
+      return;
+    }
+
+    if (!validarLinkGoogle(link)) {
+      message.warning('Por favor, cole um link válido do Google Maps ou Google Places');
+      return;
+    }
+
+    setProcessandoLink(true);
+    try {
+      const info = await processarLinkGoogle(link);
+      
+      if (info) {
+        console.log('📋 Informações recebidas:', info);
+        console.log('📅 Horários recebidos:', info.horarios);
+        console.log('📅 Tipo de horários:', typeof info.horarios);
+        console.log('📅 Chaves de horários:', info.horarios ? Object.keys(info.horarios) : 'null');
+        
+        // Marcar como recorrente automaticamente quando vier do Google Maps
+        console.log('✅ Marcando como evento recorrente automaticamente');
+        form.setFieldsValue({ recorrente: true });
+        
+        // Preencher nome se disponível
+        if (info.nome) {
+          console.log('✅ Preenchendo nome:', info.nome);
+          form.setFieldsValue({ nome: info.nome });
+        } else {
+          console.warn('⚠️ Nome não encontrado nas informações');
+        }
+        
+        // Preencher endereço se disponível
+        if (info.endereco) {
+          console.log('✅ Preenchendo endereço:', info.endereco);
+          form.setFieldsValue({ endereco: info.endereco });
+          // Atualizar o componente AutocompleteEndereco também
+          if (info.localizacao) {
+            console.log('✅ Preenchendo localização:', info.localizacao);
+            setLocalizacaoEndereco(info.localizacao);
+          }
+        } else {
+          console.warn('⚠️ Endereço não encontrado nas informações');
+        }
+        
+        // Se tiver horários, preencher horários
+        if (info.horarios && typeof info.horarios === 'object' && Object.keys(info.horarios).length > 0) {
+          console.log('📅 Horários encontrados:', info.horarios);
+          
+          // Preencher horários por dia
+          const horariosPorDia: any = {};
+          const diasSemana: number[] = [];
+          
+          Object.keys(info.horarios).forEach((diaStr) => {
+            const dia = parseInt(diaStr);
+            const horario = info.horarios![dia];
+            console.log(`📅 Processando dia ${dia}:`, horario);
+            
+            if (horario && horario.abertura && horario.fechamento) {
+              try {
+                horariosPorDia[dia] = {
+                  horarioAbertura: dayjs(horario.abertura, 'HH:mm'),
+                  horarioFechamento: dayjs(horario.fechamento, 'HH:mm'),
+                  preco: 'gratuito', // Padrão, usuário pode alterar
+                };
+                diasSemana.push(dia);
+                console.log(`✅ Horário adicionado para dia ${dia}: ${horario.abertura} - ${horario.fechamento}`);
+              } catch (error) {
+                console.error(`❌ Erro ao processar horário do dia ${dia}:`, error);
+              }
+            } else {
+              console.warn(`⚠️ Horário inválido para dia ${dia}:`, horario);
+            }
+          });
+          
+          console.log('📅 Horários por dia preparados:', horariosPorDia);
+          console.log('📅 Dias da semana preparados:', diasSemana);
+          
+          if (Object.keys(horariosPorDia).length > 0) {
+            // Preencher dias da semana e horários
+            form.setFieldsValue({ 
+              diasSemana: diasSemana,
+              horariosPorDia: horariosPorDia 
+            });
+            console.log('✅ Horários preenchidos no formulário');
+            message.success(`${Object.keys(horariosPorDia).length} dias de horários extraídos! Verifique e ajuste se necessário.`);
+          } else {
+            console.warn('⚠️ Nenhum horário válido encontrado após processamento');
+            message.warning('Horários não foram encontrados automaticamente. O evento foi marcado como recorrente - preencha os horários manualmente.');
+          }
+        } else {
+          console.warn('⚠️ Nenhum horário encontrado nas informações');
+          console.warn('⚠️ info.horarios:', info.horarios);
+          // Mesmo sem horários, o evento já foi marcado como recorrente
+          // O usuário pode preencher os horários manualmente
+          message.info('O evento foi marcado como recorrente. Preencha os horários manualmente.');
+        }
+        
+        // Se tiver URL da imagem, fazer download e adicionar ao upload
+        if (info.imagemUrl) {
+          console.log('🖼️ URL da imagem recebida:', info.imagemUrl);
+          try {
+            // Fazer download da imagem
+            const response = await fetch(info.imagemUrl);
+            if (!response.ok) {
+              throw new Error('Erro ao baixar imagem');
+            }
+            
+            const blob = await response.blob();
+            console.log('✅ Imagem baixada, tamanho:', blob.size, 'tipo:', blob.type);
+            
+            // Criar File a partir do Blob
+            const fileName = `google-maps-image.${blob.type.split('/')[1] || 'jpg'}`;
+            const file = new File([blob], fileName, { type: blob.type });
+            
+            // Criar preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const result = e.target?.result as string;
+              setImagePreview(result);
+            };
+            reader.readAsDataURL(file);
+            
+            // Criar objeto de arquivo com originFileObj preservado
+            const fileWithOrigin: UploadFile = {
+              uid: Date.now().toString(),
+              name: fileName,
+              status: 'done',
+              url: undefined,
+              thumbUrl: undefined,
+              originFileObj: file as any // IMPORTANTE: Preservar o arquivo original
+            };
+            
+            setFileList([fileWithOrigin]);
+            console.log('✅ Imagem adicionada ao upload:', {
+              name: fileName,
+              size: file.size,
+              type: file.type,
+              hasOriginFileObj: !!fileWithOrigin.originFileObj
+            });
+            
+            message.success('Imagem do Google Maps adicionada automaticamente!');
+          } catch (error) {
+            console.error('❌ Erro ao baixar imagem do Google Maps:', error);
+            message.warning('Não foi possível baixar a imagem do Google Maps. Você pode adicionar uma imagem manualmente.');
+          }
+        }
+        
+        message.success('Informações do Google Maps extraídas com sucesso!');
+      } else {
+        message.warning('Não foi possível extrair informações do link. Tente novamente ou preencha manualmente.');
+      }
+    } catch (error) {
+      console.error('Erro ao processar link do Google:', error);
+      message.error('Erro ao processar link do Google. Tente novamente.');
+    } finally {
+      setProcessandoLink(false);
+    }
+  };
+
   return (
     <div className="adicionar-evento">
       <Header />
@@ -541,9 +717,59 @@ const AdicionarEvento: React.FC = () => {
                 rows={4}
               placeholder="Descrição do evento..."
                 showCount
-                maxLength={500}
+                maxLength={2000}
               />
             </Form.Item>
+
+            {/* Campo opcional para colar link do Google Maps/Places - APENAS PARA ADMINS */}
+            {isAdmin && (
+              <Form.Item
+                name="linkGoogle"
+                label={<span style={{ color: '#FFFFFF', fontWeight: 600 }}>Link do Google Maps (Opcional - Admin)</span>}
+              help={<span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>Cole um link do Google Maps ou Google Places para preencher automaticamente nome, endereço e horários</span>}
+            >
+              <Space.Compact style={{ width: '100%' }}>
+                <Input
+                  size="large"
+                  placeholder="Cole o link do Google Maps aqui..."
+                  prefix={<LinkOutlined />}
+                  onPaste={(e) => {
+                    const texto = e.clipboardData.getData('text');
+                    if (texto && validarLinkGoogle(texto)) {
+                      handleProcessarLinkGoogle(texto);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const texto = e.target.value;
+                    if (texto && validarLinkGoogle(texto)) {
+                      handleProcessarLinkGoogle(texto);
+                    }
+                  }}
+                  suffix={processandoLink ? <LoadingOutlined spin /> : null}
+                  allowClear
+                />
+                <Button
+                  size="large"
+                  type="default"
+                  icon={<LinkOutlined />}
+                  loading={processandoLink}
+                  onClick={() => {
+                    const link = form.getFieldValue('linkGoogle');
+                    if (link) {
+                      handleProcessarLinkGoogle(link);
+                    }
+                  }}
+                  style={{
+                    background: 'rgba(91, 46, 255, 0.2)',
+                    borderColor: 'rgba(91, 46, 255, 0.5)',
+                    color: '#FFFFFF',
+                  }}
+                >
+                  Extrair
+                </Button>
+              </Space.Compact>
+            </Form.Item>
+            )}
 
             <Form.Item
               name="tipo"

@@ -67,6 +67,18 @@ const customTheme = {
       colorBgContainer: 'rgba(255, 255, 255, 0.05)',
       colorBorder: 'rgba(255, 255, 255, 0.1)',
     },
+    Modal: {
+      contentBg: 'rgba(20, 20, 24, 0.95)',
+      headerBg: 'transparent',
+      footerBg: 'transparent',
+      titleColor: '#FFFFFF',
+      colorText: '#FFFFFF',
+      colorTextSecondary: 'rgba(255, 255, 255, 0.7)',
+      borderRadius: 16,
+      paddingContentHorizontal: 24,
+      paddingContentVertical: 24,
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+    },
   },
 };
 

@@ -18,12 +18,20 @@
 }
 
 .btn-voltar {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #FFFFFF !important;
   backdrop-filter: blur(10px);
-  margin-bottom: 1.5rem;
+  margin-bottom: 0 !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 34px !important;
+  padding: 0 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 500;
+  line-height: 1 !important;
+  vertical-align: middle;
 }
 
 .btn-voltar:hover {
@@ -31,6 +39,13 @@
   border-color: rgba(255, 255, 255, 0.2);
   color: #FFFFFF;
   transform: translateX(-4px);
+}
+
+@media (min-width: 769px) {
+  .btn-voltar {
+    height: 36px;
+    padding: 0 16px;
+  }
 }
 
 .evento-imagem-capa {
@@ -166,6 +181,118 @@
 
 .album-fotos .ant-image:hover .ant-image-img {
   transform: scale(1.05);
+}
+
+/* Estilos do Modal de Adicionar Fotos */
+.modal-adicionar-fotos .ant-modal-content {
+  background: rgba(20, 20, 24, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+
+.modal-adicionar-fotos .ant-modal-header {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px 24px;
+}
+
+.modal-adicionar-fotos .ant-modal-title {
+  color: #FFFFFF;
+}
+
+.modal-adicionar-fotos .ant-modal-close {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.modal-adicionar-fotos .ant-modal-close:hover {
+  color: #FFFFFF;
+}
+
+.modal-adicionar-fotos .ant-modal-body {
+  padding: 24px;
+}
+
+.modal-adicionar-fotos .ant-modal-footer {
+  background: transparent;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  align-items: center;
+}
+
+.modal-adicionar-fotos .ant-modal-footer .ant-btn {
+  height: 40px;
+  padding: 0 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  min-width: 120px;
+}
+
+.modal-adicionar-fotos .ant-btn-default {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  order: 1;
+}
+
+.modal-adicionar-fotos .ant-btn-default:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.modal-adicionar-fotos .ant-btn-primary {
+  background: linear-gradient(135deg, #5B2EFF 0%, #01D9FF 100%);
+  border: none;
+  box-shadow: 0 4px 16px rgba(91, 46, 255, 0.4);
+  order: 2;
+}
+
+.modal-adicionar-fotos .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #6B3EFF 0%, #11E9FF 100%);
+  box-shadow: 0 6px 20px rgba(91, 46, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.modal-adicionar-fotos .ant-select-selector {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #FFFFFF !important;
+}
+
+.modal-adicionar-fotos .ant-select-selection-item {
+  color: #FFFFFF !important;
+}
+
+.modal-adicionar-fotos .ant-select-arrow {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.modal-adicionar-fotos .ant-upload-select {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 2px dashed rgba(91, 46, 255, 0.3) !important;
+  border-radius: 12px !important;
+  transition: all 0.3s ease !important;
+}
+
+.modal-adicionar-fotos .ant-upload-select:hover {
+  background: rgba(91, 46, 255, 0.1) !important;
+  border-color: rgba(91, 46, 255, 0.5) !important;
+}
+
+.upload-fotos-custom .ant-upload-list-item {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.upload-fotos-custom .ant-upload-list-item-thumbnail img {
+  border-radius: 8px;
 }
 
 @media (min-width: 769px) {
